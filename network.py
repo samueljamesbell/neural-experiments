@@ -7,6 +7,9 @@ _INPUT_LAYER_DIMENSIONS = 4
 _HIDDEN_LAYER_DIMENSIONS = 4 
 _OUTPUT_LAYER_DIMENSIONS = 3
 
+_TRAINING_EPOCHS = 1000
+_LEARNING_RATE = 0.0001
+
 _TRAINING_PATH = 'data/iris_training.csv'
 _TEST_PATH = 'data/iris_test.csv'
 
@@ -39,12 +42,17 @@ class FeedForwardNet(object):
         self.A_o = np.zeros([number_training_examples, _OUTPUT_LAYER_DIMENSIONS])
 
     def train(self, X, Y):
-        self._forward_pass(X)
-
-        softmax_outputs = self._softmax(self.A_o)
         Y_probabilities = self._gold_label_probabilities(Y)
-        cost = self._cost_prime(softmax_outputs, Y_probabilities)
-        self._back_propagate(cost)
+
+        for i in range(0, _TRAINING_EPOCHS):
+            self._forward_pass(X)
+            softmax_outputs = self._softmax(self.A_o)
+            cost = self._cost_prime(softmax_outputs, Y_probabilities)
+            self._back_propagate(cost, X)
+
+        print('Accuracy: {}'.format(np.mean(np.multiply(softmax_outputs,
+            Y_probabilities))))
+
 
     def _gold_label_probabilities(self, Y):
         """Return a vector representation of a label.
@@ -61,7 +69,7 @@ class FeedForwardNet(object):
         Y_probabilities[:, 0] = Y == 0
         Y_probabilities[:, 1] = Y == 1
         Y_probabilities[:, 2] = Y == 2
-        return Y_probabilities.reshape(3,120)
+        return Y_probabilities.transpose()
 
     def _forward_pass(self, X):
         self.Z_h = self.W_x_h.dot(X) + self.b_h
@@ -70,18 +78,33 @@ class FeedForwardNet(object):
         self.Z_o = self.W_h_o.dot(self.A_h) + self.b_o
         self.A_o = self._activation(self.Z_o)
 
-    def _back_propagate(self, cost):
+    def _back_propagate(self, cost, X):
         output_layer_error = np.multiply(cost, self._activation_prime(self.Z_o))
         hidden_layer_error = np.multiply(self.W_h_o.T.dot(output_layer_error), self._activation_prime(self.Z_h))
 
-        print(hidden_layer_error)
+        output_layer_bias_gradients = output_layer_error
+        hidden_layer_bias_gradients = hidden_layer_error
 
+        output_layer_weight_gradients = output_layer_error.dot(self.A_h.T)
+        hidden_layer_weight_gradients = hidden_layer_error.dot(X.T)
+
+        ### This is batch gradient descent - should probably be its own method
+        self.b_o = self.b_o - (np.mean(output_layer_bias_gradients,
+                                      axis=1).reshape(self.b_o.shape[0], 1) *
+                                      _LEARNING_RATE)
+        self.b_h = self.b_h - (np.mean(hidden_layer_bias_gradients,
+                                      axis=1).reshape(self.b_h.shape[0], 1) *
+                                      _LEARNING_RATE)
+
+        self.W_h_o = self.W_h_o - (np.mean(output_layer_weight_gradients,
+            axis=0) * _LEARNING_RATE)
+        self.W_x_h = self.W_x_h - (np.mean(hidden_layer_weight_gradients,
+            axis=0) * _LEARNING_RATE)
 
     def _softmax(self, M):
         """Compute Softmax of a given matrix, M."""
-        M_length = M.shape[0]
         M_exponents = np.exp(M)
-        denominators = np.sum(M_exponents, axis=1).reshape(M_length, 1)
+        denominators = np.sum(M_exponents, axis=0)
         return np.divide(M_exponents, denominators)
 
     def _activation(self, v):
@@ -96,7 +119,8 @@ class FeedForwardNet(object):
         Note that this returns a matrix of partial derivatives,
         """
         # TODO: Specify the cost function in the comments
-        return np.absolute(Y_predicted - Y_actual)
+        #indices = np.argmax(Y_predicted, axis=0)
+        return Y_predicted - Y_actual
 
 
 X_train, Y_train = _load_data(_TRAINING_PATH)
