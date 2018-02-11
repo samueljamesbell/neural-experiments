@@ -6,6 +6,7 @@ Trained on the Fisher's Iris data set.
 import numpy as np
 
 import iris_data_loader
+import utils
 
 
 _INPUT_LAYER_DIMENSIONS = 4
@@ -14,37 +15,6 @@ _OUTPUT_LAYER_DIMENSIONS = 3
 
 _TRAINING_EPOCHS = 50000
 _LEARNING_RATE = 0.0001
-
-
-def _take_max(M):
-    """Given a matrix M, find the max values in each row.
-
-    Returns a 1 in the column with the max value; 0 otherwise.
-    """
-    # TODO: This is very Iris-specific
-    M_max = np.argmax(M, axis=0)
-
-    N = np.zeros_like(M)
-    N[0, :] = M_max == 0
-    N[1, :] = M_max == 1
-    N[2, :] = M_max == 2
-    return N
-
-
-def _to_categorical_identity(Y):
-    """Return a sparse representation of a set of labels.
-
-    For a given label y, return a vector with all probability density assigned
-    to the yth index of the vector.
-
-    e.g.  y = 2 yields [0, 0, 1]
-    """
-    # TODO: This is very Iris-specific
-    Y_probabilities = np.zeros([Y.shape[0], len(np.unique(Y))])
-    Y_probabilities[:, 0] = Y == 0
-    Y_probabilities[:, 1] = Y == 1
-    Y_probabilities[:, 2] = Y == 2
-    return Y_probabilities.transpose()
 
 
 def _softmax(M):
@@ -96,12 +66,14 @@ class FeedForwardNet(object):
         self.A_o = np.zeros(
             [number_training_examples, _OUTPUT_LAYER_DIMENSIONS])
 
-    def train(self, X, Y):
+    def train(self, X, Y, label_set):
         """Train given a set of data points, X, and gold labels, Y.
+
+        label_set is the set of all possible gold labels.
 
         Currently calculates a crude non-confidence weighted accuracy.
         """
-        Y_probabilities = _to_categorical_identity(Y)
+        Y_probabilities = utils.to_categorical_identity(Y, label_set)
 
         for i in range(0, _TRAINING_EPOCHS):
             self._forward_pass(X)
@@ -115,7 +87,7 @@ class FeedForwardNet(object):
         print('Accuracy: {}'.format(
             np.mean(
                 np.sum(
-                    np.multiply(_take_max(self.A_o),
+                    np.multiply(utils.take_max(self.A_o),
                                 Y_probabilities), axis=0))))
 
     def _forward_pass(self, X):
@@ -167,4 +139,4 @@ class FeedForwardNet(object):
 if __name__ == '__main__':
     X_train, Y_train = iris_data_loader.training_data()
     n = FeedForwardNet(X_train.shape[0])
-    n.train(X_train, Y_train)
+    n.train(X_train, Y_train, iris_data_loader.LABELS)
