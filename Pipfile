@@ -10,6 +10,8 @@ name = "pypi"
 numpy = "*"
 jupyter = "*"
 pandas = "*"
+scikit-learn = "*"
+scipy = "*"
 
 
 [dev-packages]

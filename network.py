@@ -1,13 +1,16 @@
+"""A simple feedforward neural network with a fixed number of layers.
+
+Trained on the Fisher's Iris data set.
+"""
+
 import numpy as np
 import pandas
-import math
-
 
 _INPUT_LAYER_DIMENSIONS = 4
-_HIDDEN_LAYER_DIMENSIONS = 4 
+_HIDDEN_LAYER_DIMENSIONS = 3
 _OUTPUT_LAYER_DIMENSIONS = 3
 
-_TRAINING_EPOCHS = 1000
+_TRAINING_EPOCHS = 50000
 _LEARNING_RATE = 0.0001
 
 _TRAINING_PATH = 'data/iris_training.csv'
@@ -22,18 +25,18 @@ def _load_data(path):
     data = pandas.read_csv(path, names=_COLUMN_NAMES, skiprows=[0])
     X = data.loc[:, _FEATURE_NAMES].T
     Y = data.loc[:, 'species']
-    return X, Y 
+    return X, Y
 
 
 class FeedForwardNet(object):
 
     def __init__(self, number_training_examples):
-        self.W_x_h = np.random.rand(_HIDDEN_LAYER_DIMENSIONS,
+        self.W_x_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS,
                 _INPUT_LAYER_DIMENSIONS)
-        self.W_h_o = np.random.rand(_OUTPUT_LAYER_DIMENSIONS,
+        self.W_h_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS,
                 _HIDDEN_LAYER_DIMENSIONS)
-        self.b_h = np.random.rand(_HIDDEN_LAYER_DIMENSIONS, 1)
-        self.b_o = np.random.rand(_OUTPUT_LAYER_DIMENSIONS, 1)
+        self.b_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS, 1)
+        self.b_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS, 1)
 
         self.Z_h = np.zeros([number_training_examples, _HIDDEN_LAYER_DIMENSIONS])
         self.Z_o = np.zeros([number_training_examples, _OUTPUT_LAYER_DIMENSIONS])
@@ -45,13 +48,17 @@ class FeedForwardNet(object):
         Y_probabilities = self._gold_label_probabilities(Y)
 
         for i in range(0, _TRAINING_EPOCHS):
+            print(i)
             self._forward_pass(X)
-            softmax_outputs = self._softmax(self.A_o)
-            cost = self._cost_prime(softmax_outputs, Y_probabilities)
+            #softmax_outputs = self._softmax(self.A_o)
+            #cost = self._cost_prime(softmax_outputs, Y_probabilities)
+            cost = self._cost_prime(self.A_o, Y_probabilities)
             self._back_propagate(cost, X)
 
-        print('Accuracy: {}'.format(np.mean(np.multiply(softmax_outputs,
-            Y_probabilities))))
+        discrete_outputs = self._take_max(self.A_o)
+
+        print('Accuracy: {}'.format(np.mean(np.sum(np.multiply(discrete_outputs,
+            Y_probabilities), axis=0))))
 
 
     def _gold_label_probabilities(self, Y):
@@ -89,6 +96,7 @@ class FeedForwardNet(object):
         hidden_layer_weight_gradients = hidden_layer_error.dot(X.T)
 
         ### This is batch gradient descent - should probably be its own method
+
         self.b_o = self.b_o - (np.mean(output_layer_bias_gradients,
                                       axis=1).reshape(self.b_o.shape[0], 1) *
                                       _LEARNING_RATE)
@@ -96,10 +104,8 @@ class FeedForwardNet(object):
                                       axis=1).reshape(self.b_h.shape[0], 1) *
                                       _LEARNING_RATE)
 
-        self.W_h_o = self.W_h_o - (np.mean(output_layer_weight_gradients,
-            axis=0) * _LEARNING_RATE)
-        self.W_x_h = self.W_x_h - (np.mean(hidden_layer_weight_gradients,
-            axis=0) * _LEARNING_RATE)
+        self.W_h_o = self.W_h_o - (output_layer_weight_gradients * _LEARNING_RATE)
+        self.W_x_h = self.W_x_h - (hidden_layer_weight_gradients * _LEARNING_RATE)
 
     def _softmax(self, M):
         """Compute Softmax of a given matrix, M."""
@@ -107,11 +113,22 @@ class FeedForwardNet(object):
         denominators = np.sum(M_exponents, axis=0)
         return np.divide(M_exponents, denominators)
 
+    def _take_max(self, M):
+        M_max = np.argmax(M, axis=0)
+
+        N = np.zeros_like(M)
+        N[0, :] = M_max == 0
+        N[1, :] = M_max == 1
+        N[2, :] = M_max == 2
+        return N
+
     def _activation(self, v):
-        return np.tanh(v)
+        return 1.0 / (1.0 + np.exp(-v))
+        #return np.tanh(v)
 
     def _activation_prime(self, v):
-        return 1 / np.power(np.tanh(v), 2)
+        return self._activation(v) * (1 - self._activation(v))
+        #return 1 / np.power(np.tanh(v), 2)
 
     def _cost_prime(self, Y_predicted, Y_actual):
         """Return the deriv. of the cost of each label w.r.t. its gold label.
