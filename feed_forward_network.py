@@ -4,7 +4,8 @@ Trained on the Fisher's Iris data set.
 """
 
 import numpy as np
-import pandas
+
+import iris_data_loader
 
 
 _INPUT_LAYER_DIMENSIONS = 4
@@ -13,20 +14,6 @@ _OUTPUT_LAYER_DIMENSIONS = 3
 
 _TRAINING_EPOCHS = 50000
 _LEARNING_RATE = 0.0001
-
-_TRAINING_PATH = 'data/iris_training.csv'
-_TEST_PATH = 'data/iris_test.csv'
-
-_FEATURE_NAMES = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
-_COLUMN_NAMES = _FEATURE_NAMES + ['species']
-_SPECIES = ['sentosa', 'versicolor', 'virginica']
-
-
-def _load_data(path):
-    data = pandas.read_csv(path, names=_COLUMN_NAMES, skiprows=[0])
-    X = data.loc[:, _FEATURE_NAMES].T
-    Y = data.loc[:, 'species']
-    return X, Y
 
 
 def _take_max(M):
@@ -177,6 +164,7 @@ class FeedForwardNet(object):
             (hidden_layer_weight_gradients * _LEARNING_RATE)
 
 
-X_train, Y_train = _load_data(_TRAINING_PATH)
-n = FeedForwardNet(X_train.shape[0])
-n.train(X_train, Y_train)
+if __name__ == '__main__':
+    X_train, Y_train = iris_data_loader.training_data()
+    n = FeedForwardNet(X_train.shape[0])
+    n.train(X_train, Y_train)
