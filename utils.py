@@ -1,4 +1,13 @@
+"""Assorted functions."""
+
 import numpy as np
+
+
+def softmax(M):
+    """Compute Softmax of a given matrix, M."""
+    M_exponents = np.exp(M)
+    denominators = np.sum(M_exponents, axis=0)
+    return np.divide(M_exponents, denominators)
 
 
 def to_categorical_identity(Y, labels):
@@ -29,5 +38,3 @@ def take_max(M):
         N[i, :] = M_max == i
 
     return N
-
-

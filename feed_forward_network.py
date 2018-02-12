@@ -5,6 +5,8 @@ Trained on the Fisher's Iris data set.
 
 import numpy as np
 
+import activation
+import cost
 import iris_data_loader
 import utils
 
@@ -15,35 +17,6 @@ _OUTPUT_LAYER_DIMENSIONS = 3
 
 _TRAINING_EPOCHS = 50000
 _LEARNING_RATE = 0.0001
-
-
-def _softmax(M):
-    """Compute Softmax of a given matrix, M."""
-    M_exponents = np.exp(M)
-    denominators = np.sum(M_exponents, axis=0)
-    return np.divide(M_exponents, denominators)
-
-
-def _activation(v):
-    """Sigmoid activation function. Vectorised."""
-    return 1.0 / (1.0 + np.exp(-v))
-    # return np.tanh(v)
-
-
-def _activation_prime(v):
-    """Derivative of the sigmoid activation function. Vectorised."""
-    return _activation(v) * (1 - _activation(v))
-    # return 1 / np.power(np.tanh(v), 2)
-
-
-def _cost_prime(Y_predicted, Y_actual):
-    """Return the deriv. of the cost of each label w.r.t. its gold label.
-
-    Original cost function is quadratic cost.
-
-    Note that this returns a matrix of partial derivatives,
-    """
-    return Y_predicted - Y_actual
 
 
 class FeedForwardNet(object):
@@ -78,9 +51,9 @@ class FeedForwardNet(object):
         for i in range(0, _TRAINING_EPOCHS):
             self._forward_pass(X)
             # TODO: Restore softmax output layer.
-            # softmax_outputs = _softmax(self.A_o)
-            # cost = _cost_prime(softmax_outputs, Y_probabilities)
-            cost = _cost_prime(self.A_o, Y_probabilities)
+            # softmax_outputs = utils.softmax(self.A_o)
+            # cost = cost.quadratic_cost_prime(softmax_outputs, Y_probabilities)
+            cost = cost.quadratic_cost_prime(self.A_o, Y_probabilities)
             self._back_propagate(cost, X)
 
         # TODO: Split this into test and evaluate methods.
@@ -96,10 +69,10 @@ class FeedForwardNet(object):
         Stores both weighted inputs and activations for each layer.
         """
         self.Z_h = self.W_x_h.dot(X) + self.b_h
-        self.A_h = _activation(self.Z_h)
+        self.A_h = activation.sigmoid(self.Z_h)
 
         self.Z_o = self.W_h_o.dot(self.A_h) + self.b_o
-        self.A_o = _activation(self.Z_o)
+        self.A_o = activation.sigmoid(self.Z_o)
 
     def _back_propagate(self, cost, X):
         """Update weights and biases according to the cost.
@@ -111,9 +84,9 @@ class FeedForwardNet(object):
         calculate the error of each layer here.
         """
         output_layer_error = np.multiply(
-            cost, _activation_prime(self.Z_o))
+            cost, activation.sigmoid_prime(self.Z_o))
         hidden_layer_error = np.multiply(self.W_h_o.T.dot(
-            output_layer_error), _activation_prime(self.Z_h))
+            output_layer_error), activation.sigmoid_prime(self.Z_h))
 
         output_layer_bias_gradients = output_layer_error
         hidden_layer_bias_gradients = hidden_layer_error
