@@ -10,6 +10,11 @@ def softmax(M):
     return np.divide(M_exponents, denominators)
 
 
+def accuracy(Y_predicted, Y_actual):
+    """Return classification acc. from two categorical identity vectors."""
+    return np.mean(np.sum(np.multiply(Y_predicted, Y_actual), axis=0))
+
+
 def to_categorical_identity(Y, labels):
     """Return a sparse representation of a set of labels.
 

@@ -15,7 +15,7 @@ _INPUT_LAYER_DIMENSIONS = 4
 _HIDDEN_LAYER_DIMENSIONS = 3
 _OUTPUT_LAYER_DIMENSIONS = 3
 
-_TRAINING_EPOCHS = 50000
+_TRAINING_EPOCHS = 25000
 _LEARNING_RATE = 0.0001
 
 
@@ -43,8 +43,6 @@ class FeedForwardNet(object):
         """Train given a set of data points, X, and gold labels, Y.
 
         label_set is the set of all possible gold labels.
-
-        Currently calculates a crude non-confidence weighted accuracy.
         """
         Y_probabilities = utils.to_categorical_identity(Y, label_set)
 
@@ -53,15 +51,21 @@ class FeedForwardNet(object):
             # TODO: Restore softmax output layer.
             # softmax_outputs = utils.softmax(self.A_o)
             # cost = cost.quadratic_cost_prime(softmax_outputs, Y_probabilities)
-            cost = cost.quadratic_cost_prime(self.A_o, Y_probabilities)
-            self._back_propagate(cost, X)
+            C = cost.quadratic_cost_prime(self.A_o, Y_probabilities)
+            self._back_propagate(C, X)
 
-        # TODO: Split this into test and evaluate methods.
-        print('Accuracy: {}'.format(
-            np.mean(
-                np.sum(
-                    np.multiply(utils.take_max(self.A_o),
-                                Y_probabilities), axis=0))))
+        accuracy = utils.accuracy(utils.take_max(self.A_o), Y_probabilities)
+        print('Training accuracy: {}'.format(accuracy))
+
+    def test(self, X, Y, label_set):
+        """Test infererence given  a set of data points, X, and gold labels, Y.
+
+        label_set is the set of all possible gold labels.
+        """
+        Y_probabilities = utils.to_categorical_identity(Y, label_set)
+        self._forward_pass(X)
+        accuracy = utils.accuracy(utils.take_max(self.A_o), Y_probabilities)
+        print('Test accuracy: {}'.format(accuracy))
 
     def _forward_pass(self, X):
         """Forward pass all points in X through the network.
@@ -111,5 +115,7 @@ class FeedForwardNet(object):
 
 if __name__ == '__main__':
     X_train, Y_train = iris_data_loader.training_data()
+    X_test, Y_test = iris_data_loader.test_data()
     n = FeedForwardNet(X_train.shape[0])
     n.train(X_train, Y_train, iris_data_loader.LABELS)
+    n.test(X_test, Y_test, iris_data_loader.LABELS)
