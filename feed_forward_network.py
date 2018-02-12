@@ -1,8 +1,4 @@
-"""A simple feedforward neural network with a fixed number of layers.
-
-Trained on the Fisher's Iris data set.
-"""
-
+"""A simple feedforward neural network with a fixed number of layers. """
 import numpy as np
 
 import activation
@@ -20,6 +16,13 @@ _LEARNING_RATE = 0.0001
 
 
 class FeedForwardNet(object):
+
+    # TODO: Have _feed_forward return a list of activation layer vectors and
+    # weighted input layer vectors.
+    # Backprop could take these and return a list of error layer vectors.
+    # Gradient descent takes this, and actually updates weights and biases.§
+
+    # TODO: Use softmax output layer and cross-entropy loss function.
 
     def __init__(self, number_training_examples):
         self.W_x_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS,
