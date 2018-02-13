@@ -17,9 +17,7 @@ _LEARNING_RATE = 0.0001
 
 class FeedForwardNet(object):
 
-    # TODO: Have _feed_forward return a list of activation layer vectors and
-    # weighted input layer vectors.
-    # Backprop could take these and return a list of error layer vectors.
+    # TODO: Backprop could take these and return a list of error layer vectors.
     # Gradient descent takes this, and actually updates weights and biases.§
 
     # TODO: Use softmax output layer and cross-entropy loss function.
@@ -31,18 +29,6 @@ class FeedForwardNet(object):
                                      _HIDDEN_LAYER_DIMENSIONS)
         self.b_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS, 1)
         self.b_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS, 1)
-
-        # The following are d x n matrices, where d is the
-        # dimensionality of the layer.
-        self.Z_h = np.zeros(
-            [_HIDDEN_LAYER_DIMENSIONS, number_training_examples])
-        self.Z_o = np.zeros(
-            [_OUTPUT_LAYER_DIMENSIONS, number_training_examples])
-
-        self.A_h = np.zeros(
-            [_HIDDEN_LAYER_DIMENSIONS, number_training_examples])
-        self.A_o = np.zeros(
-            [_OUTPUT_LAYER_DIMENSIONS, number_training_examples])
 
     def train(self, X, Y, label_set):
         """Train given a set of data points, X, and gold labels, Y.
@@ -57,15 +43,17 @@ class FeedForwardNet(object):
         Y_probabilities = utils.to_categorical_identity(Y, label_set)
 
         for i in range(0, _TRAINING_EPOCHS):
-            self._forward_pass(X)
+            Z, A = self._forward_pass(X)
             # TODO: Restore softmax output layer.
             # softmax_outputs = utils.softmax(self.A_o)
             # cost = cost.quadratic_cost_prime(softmax_outputs, Y_probabilities)
-            C = cost.quadratic_cost_prime(self.A_o, Y_probabilities)
-            self._back_propagate(C, X)
+            C = cost.quadratic_cost_prime(A[-1], Y_probabilities)
+            self._back_propagate(C, X, Z, A)
 
+        # Perform a final forward pass with our optimised weights.
+        _, A = self._forward_pass(X)
 
-        accuracy = utils.accuracy(utils.take_max(self.A_o), Y_probabilities)
+        accuracy = utils.accuracy(utils.take_max(A[-1]), Y_probabilities)
         print('Training accuracy: {}'.format(accuracy))
 
     def test(self, X, Y, label_set):
@@ -79,8 +67,8 @@ class FeedForwardNet(object):
         label_set is the set of all possible gold labels.
         """
         Y_probabilities = utils.to_categorical_identity(Y, label_set)
-        self._forward_pass(X)
-        accuracy = utils.accuracy(utils.take_max(self.A_o), Y_probabilities)
+        _, A = self._forward_pass(X)
+        accuracy = utils.accuracy(utils.take_max(A[-1]), Y_probabilities)
         print('Test accuracy: {}'.format(accuracy))
 
     def _forward_pass(self, X):
@@ -89,15 +77,23 @@ class FeedForwardNet(object):
         X is an f x n matrix, where f is the number of features and n is the
         number of training examples.
 
-        Stores both weighted inputs and activations for each layer.
+        Returns a tuple of Z, A. Z is a list of weighted inputs, where each
+        entry is a d x n matrix, where d is the dimensionality of the layer and
+        n is the number of data points. A is a list of activations, with the
+        same shape as Z.
         """
-        self.Z_h = self.W_x_h.dot(X) + self.b_h
-        self.A_h = activation.sigmoid(self.Z_h)
+        Z = []
+        A = []
 
-        self.Z_o = self.W_h_o.dot(self.A_h) + self.b_o
-        self.A_o = activation.sigmoid(self.Z_o)
+        Z.append(self.W_x_h.dot(X) + self.b_h)
+        A.append(activation.sigmoid(Z[0]))
 
-    def _back_propagate(self, C, X):
+        Z.append(self.W_h_o.dot(A[0]) + self.b_o)
+        A.append(activation.sigmoid(Z[1]))
+
+        return Z, A
+
+    def _back_propagate(self, C, X, Z, A):
         """Update weights and biases according to the cost, C.
 
         C is an o x n matrix, where o is the dimensionality of the output
@@ -109,6 +105,15 @@ class FeedForwardNet(object):
         X is an f x n matrix, where f is the number of features and n is the
         number of training examples.
 
+        Z is a list of weighted inputs, where each
+        entry is a d x n matrix, where d is the dimensionality of the layer and
+        n is the number of data points.
+        
+        A is a list of activations, with the same shape as Z.
+
+        The final item in A is the output layer, and the first item is the
+        first hidden layer. The same is true for Z.
+
         Uses backpropagation to apportion cost to each parameter.
 
         Currently also performs batch (that's right, the whole batch) gradient
@@ -116,14 +121,14 @@ class FeedForwardNet(object):
         calculate the error of each layer here.
         """
         output_layer_error = np.multiply(
-            C, activation.sigmoid_prime(self.Z_o))
+            C, activation.sigmoid_prime(Z[-1]))
         hidden_layer_error = np.multiply(self.W_h_o.T.dot(
-            output_layer_error), activation.sigmoid_prime(self.Z_h))
+            output_layer_error), activation.sigmoid_prime(Z[-2]))
 
         output_layer_bias_gradients = output_layer_error
         hidden_layer_bias_gradients = hidden_layer_error
 
-        output_layer_weight_gradients = output_layer_error.dot(self.A_h.T)
+        output_layer_weight_gradients = output_layer_error.dot(A[-2].T)
         hidden_layer_weight_gradients = hidden_layer_error.dot(X.T)
 
         # TODO: This is gradient descent - should probably be its own method
