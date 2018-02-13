@@ -32,18 +32,25 @@ class FeedForwardNet(object):
         self.b_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS, 1)
         self.b_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS, 1)
 
+        # The following are d x n matrices, where d is the
+        # dimensionality of the layer.
         self.Z_h = np.zeros(
-            [number_training_examples, _HIDDEN_LAYER_DIMENSIONS])
+            [_HIDDEN_LAYER_DIMENSIONS, number_training_examples])
         self.Z_o = np.zeros(
-            [number_training_examples, _OUTPUT_LAYER_DIMENSIONS])
+            [_OUTPUT_LAYER_DIMENSIONS, number_training_examples])
 
         self.A_h = np.zeros(
-            [number_training_examples, _HIDDEN_LAYER_DIMENSIONS])
+            [_HIDDEN_LAYER_DIMENSIONS, number_training_examples])
         self.A_o = np.zeros(
-            [number_training_examples, _OUTPUT_LAYER_DIMENSIONS])
+            [_OUTPUT_LAYER_DIMENSIONS, number_training_examples])
 
     def train(self, X, Y, label_set):
         """Train given a set of data points, X, and gold labels, Y.
+
+        X is an f x n matrix, where f is the number of features and n is the
+        number of training examples.
+
+        Y is a 1 x n matrix.
 
         label_set is the set of all possible gold labels.
         """
@@ -57,11 +64,17 @@ class FeedForwardNet(object):
             C = cost.quadratic_cost_prime(self.A_o, Y_probabilities)
             self._back_propagate(C, X)
 
+
         accuracy = utils.accuracy(utils.take_max(self.A_o), Y_probabilities)
         print('Training accuracy: {}'.format(accuracy))
 
     def test(self, X, Y, label_set):
         """Test infererence given  a set of data points, X, and gold labels, Y.
+
+        X is an f x n matrix, where f is the number of features and n is the
+        number of training examples.
+
+        Y is a 1 x n matrix.
 
         label_set is the set of all possible gold labels.
         """
@@ -73,6 +86,9 @@ class FeedForwardNet(object):
     def _forward_pass(self, X):
         """Forward pass all points in X through the network.
 
+        X is an f x n matrix, where f is the number of features and n is the
+        number of training examples.
+
         Stores both weighted inputs and activations for each layer.
         """
         self.Z_h = self.W_x_h.dot(X) + self.b_h
@@ -81,8 +97,17 @@ class FeedForwardNet(object):
         self.Z_o = self.W_h_o.dot(self.A_h) + self.b_o
         self.A_o = activation.sigmoid(self.Z_o)
 
-    def _back_propagate(self, cost, X):
-        """Update weights and biases according to the cost.
+    def _back_propagate(self, C, X):
+        """Update weights and biases according to the cost, C.
+
+        C is an o x n matrix, where o is the dimensionality of the output
+        layer and n is the number of training examples. C represents a matrix
+        of partial derivatives, where every column is the partial derivative
+        of the cost function with respect to each entry in the output
+        activation vector.
+
+        X is an f x n matrix, where f is the number of features and n is the
+        number of training examples.
 
         Uses backpropagation to apportion cost to each parameter.
 
@@ -91,7 +116,7 @@ class FeedForwardNet(object):
         calculate the error of each layer here.
         """
         output_layer_error = np.multiply(
-            cost, activation.sigmoid_prime(self.Z_o))
+            C, activation.sigmoid_prime(self.Z_o))
         hidden_layer_error = np.multiply(self.W_h_o.T.dot(
             output_layer_error), activation.sigmoid_prime(self.Z_h))
 
@@ -119,6 +144,7 @@ class FeedForwardNet(object):
 if __name__ == '__main__':
     X_train, Y_train = iris_data_loader.training_data()
     X_test, Y_test = iris_data_loader.test_data()
-    n = FeedForwardNet(X_train.shape[0])
+    number_of_training_examples = X_train.shape[1]
+    n = FeedForwardNet(number_of_training_examples)
     n.train(X_train, Y_train, iris_data_loader.LABELS)
     n.test(X_test, Y_test, iris_data_loader.LABELS)
