@@ -3,16 +3,12 @@ import numpy as np
 
 import activation
 import cost
-import iris_data_loader
 import utils
 
 
 _INPUT_LAYER_DIMENSIONS = 4
 _HIDDEN_LAYER_DIMENSIONS = 3
 _OUTPUT_LAYER_DIMENSIONS = 3
-
-_TRAINING_EPOCHS = 25000
-_LEARNING_RATE = 0.0001
 
 
 class FeedForwardNet(object):
@@ -28,46 +24,39 @@ class FeedForwardNet(object):
         self.b_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS, 1)
         self.b_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS, 1)
 
-    def train(self, X, Y, label_set):
+    def train(self, X, Y, training_epochs=1, learning_rate=0.0001):
         """Train given a set of data points, X, and gold labels, Y.
 
         X is an f x n matrix, where f is the number of features and n is the
         number of training examples.
 
-        Y is a 1 x n matrix.
+        Y is an l x n matrix, where l is the number of gold labels.
 
-        label_set is the set of all possible gold labels.
+        Returns an l x n matrix of predicted categorical labels.
         """
-        Y_probabilities = utils.to_categorical_identity(Y, label_set)
-
-        for i in range(0, _TRAINING_EPOCHS):
+        for i in range(0, training_epochs):
             Z, A = self._forward_pass(X)
             # softmax_outputs = utils.softmax(self.A_o)
-            # cost = cost.quadratic_cost_prime(softmax_outputs, Y_probabilities)
-            C = cost.quadratic_cost_prime(A[-1], Y_probabilities)
+            # cost = cost.quadratic_cost_prime(softmax_outputs, Y)
+            C = cost.quadratic_cost_prime(A[-1], Y)
             deltas = self._back_propagate(C, X, Z, A)
-            self._batch_gradient_descent(deltas, X, A)
+            self._batch_gradient_descent(deltas, X, A, learning_rate)
 
-        # Perform a final forward pass with our optimised weights.
+        # Perform a final forward pass with our optimised weights.
         _, A = self._forward_pass(X)
+        return utils.take_max(A[-1])
 
-        accuracy = utils.accuracy(utils.take_max(A[-1]), Y_probabilities)
-        print('Training accuracy: {}'.format(accuracy))
-
-    def test(self, X, Y, label_set):
+    def test(self, X):
         """Test infererence given  a set of data points, X, and gold labels, Y.
 
         X is an f x n matrix, where f is the number of features and n is the
         number of training examples.
 
-        Y is a 1 x n matrix.
-
-        label_set is the set of all possible gold labels.
+        Returns an l x n matrix of predicted categorical labels, where l is the
+        number of gold labels.
         """
-        Y_probabilities = utils.to_categorical_identity(Y, label_set)
         _, A = self._forward_pass(X)
-        accuracy = utils.accuracy(utils.take_max(A[-1]), Y_probabilities)
-        print('Test accuracy: {}'.format(accuracy))
+        return utils.take_max(A[-1])
 
     def _forward_pass(self, X):
         """Forward pass all points in X through the network.
@@ -106,7 +95,7 @@ class FeedForwardNet(object):
         Z is a list of weighted inputs, where each
         entry is a d x n matrix, where d is the dimensionality of the layer and
         n is the number of data points.
-        
+
         A is a list of activations, with the same shape as Z.
 
         The final item in A is the output layer, and the first item is the
@@ -126,7 +115,7 @@ class FeedForwardNet(object):
         # That is, so that the error delta at index i is the error of the A[i].
         return deltas[::-1]
 
-    def _batch_gradient_descent(self, deltas, X, A):
+    def _batch_gradient_descent(self, deltas, X, A, learning_rate):
         """Update weights according to the layer-by-layer errors.
 
         deltas is a list of errors where each entry in the list is a
@@ -137,8 +126,9 @@ class FeedForwardNet(object):
         number of training examples.
 
         A is a list of activations, where each entry is a d x n matrix, where
-        d is the dimensionality of the layer and n is the number of data points.
-        
+        d is the dimensionality of the layer and n is the number of data
+        points.
+
         Currently performs batch (that's right, the whole batch) gradient
         descent to actually update the parameters.
         """
@@ -150,21 +140,12 @@ class FeedForwardNet(object):
 
         self.b_o = self.b_o - (np.mean(output_layer_bias_gradients,
                                        axis=1).reshape(self.b_o.shape[0], 1) *
-                               _LEARNING_RATE)
+                               learning_rate)
         self.b_h = self.b_h - (np.mean(hidden_layer_bias_gradients,
                                        axis=1).reshape(self.b_h.shape[0], 1) *
-                               _LEARNING_RATE)
+                               learning_rate)
 
         self.W_h_o = self.W_h_o - \
-            (output_layer_weight_gradients * _LEARNING_RATE)
+            (output_layer_weight_gradients * learning_rate)
         self.W_x_h = self.W_x_h - \
-            (hidden_layer_weight_gradients * _LEARNING_RATE)
-
-
-if __name__ == '__main__':
-    X_train, Y_train = iris_data_loader.training_data()
-    X_test, Y_test = iris_data_loader.test_data()
-    number_of_training_examples = X_train.shape[1]
-    n = FeedForwardNet(number_of_training_examples)
-    n.train(X_train, Y_train, iris_data_loader.LABELS)
-    n.test(X_test, Y_test, iris_data_loader.LABELS)
+            (hidden_layer_weight_gradients * learning_rate)

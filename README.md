@@ -11,5 +11,5 @@ Requirements
 Running
 ---
 ```
-pipenv run python feed_forward_network.py
+pipenv run python experiment.py
 ```
