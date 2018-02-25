@@ -16,13 +16,26 @@ class FeedForwardNet(object):
     # TODO: Generalise to flexible number of layers and dimensions.
     # TODO: Use softmax output layer and cross-entropy loss function.
 
-    def __init__(self, number_training_examples):
-        self.W_x_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS,
-                                     _INPUT_LAYER_DIMENSIONS)
-        self.W_h_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS,
-                                     _HIDDEN_LAYER_DIMENSIONS)
-        self.b_h = np.random.randn(_HIDDEN_LAYER_DIMENSIONS, 1)
-        self.b_o = np.random.randn(_OUTPUT_LAYER_DIMENSIONS, 1)
+    def __init__(self, layers):
+        """Initialise the network.
+
+        layers should be a list of layer sizes. We assume the first entry is
+        the size the input vector, and the last entry is the size of the
+        output vector.
+        """
+        self.W = self._weights(layers)
+        self.b = self._biases(layers)
+        self.num_layers = len(layers)
+
+    def _weights(self, layers):
+        """Initialise a random set of weight matrices."""
+        return [np.random.randn(layers[i+1], layers[i])
+                for i in range(0, len(layers) - 1)]
+
+    def _biases(self, layers):
+        """Initialise a random set of bias vectors."""
+        # There are no biases for the input vector
+        return [np.random.randn(l, 1) for l in layers[1:]]
 
     def train(self, X, Y, training_epochs=1, learning_rate=0.0001):
         """Train given a set of data points, X, and gold labels, Y.
@@ -43,7 +56,7 @@ class FeedForwardNet(object):
             self._batch_gradient_descent(deltas, X, A, learning_rate)
 
         # Perform a final forward pass with our optimised weights.
-        _, A = self._forward_pass(X)
+        print(A[-1])
         return utils.take_max(A[-1])
 
     def test(self, X):
@@ -70,13 +83,13 @@ class FeedForwardNet(object):
         same shape as Z.
         """
         Z = []
-        A = []
+        A = [X]
 
-        Z.append(self.W_x_h.dot(X) + self.b_h)
-        A.append(activation.sigmoid(Z[0]))
-
-        Z.append(self.W_h_o.dot(A[0]) + self.b_o)
-        A.append(activation.sigmoid(Z[1]))
+        for i in range(0, self.num_layers - 1):
+            z = self.W[i].dot(A[i]) + self.b[i]
+            a = activation.sigmoid(z)
+            Z.append(z)
+            A.append(a)
 
         return Z, A
 
@@ -107,13 +120,17 @@ class FeedForwardNet(object):
         """
         deltas = []
 
+        # Calculate error with respect to the output layer
         deltas.append(np.multiply(C, activation.sigmoid_prime(Z[-1])))
-        deltas.append(np.multiply(self.W_h_o.T.dot(
-            deltas[0]), activation.sigmoid_prime(Z[-2])))
 
-        # We reverse the order of deltas so its indices align with A.
-        # That is, so that the error delta at index i is the error of the A[i].
-        return deltas[::-1]
+        # Calculate error with respect to each hidden layer
+        for i in range(0, self.num_layers - 2):
+            i_reverse = self.num_layers - 2 - i
+            deltas.append(np.multiply(self.W[i_reverse].T.dot(
+                deltas[i]),
+                activation.sigmoid_prime(Z[i_reverse-1])))
+
+        return deltas
 
     def _batch_gradient_descent(self, deltas, X, A, learning_rate):
         """Update weights according to the layer-by-layer errors.
@@ -132,20 +149,12 @@ class FeedForwardNet(object):
         Currently performs batch (that's right, the whole batch) gradient
         descent to actually update the parameters.
         """
-        output_layer_bias_gradients = deltas[-1]
-        hidden_layer_bias_gradients = deltas[-2]
+        for i in range(0, self.num_layers - 1):
+            i_reverse = self.num_layers - 2 - i
 
-        output_layer_weight_gradients = deltas[-1].dot(A[-2].T)
-        hidden_layer_weight_gradients = deltas[-2].dot(X.T)
+            self.b[i_reverse] = self.b[i_reverse] - (np.mean(
+                deltas[i_reverse], axis=1).reshape(
+                    self.b[i_reverse].shape[0], 1) * learning_rate)
 
-        self.b_o = self.b_o - (np.mean(output_layer_bias_gradients,
-                                       axis=1).reshape(self.b_o.shape[0], 1) *
-                               learning_rate)
-        self.b_h = self.b_h - (np.mean(hidden_layer_bias_gradients,
-                                       axis=1).reshape(self.b_h.shape[0], 1) *
-                               learning_rate)
-
-        self.W_h_o = self.W_h_o - \
-            (output_layer_weight_gradients * learning_rate)
-        self.W_x_h = self.W_x_h - \
-            (hidden_layer_weight_gradients * learning_rate)
+            self.W[i_reverse] = self.W[i_reverse] - deltas[i_reverse].dot(
+                    A[i_reverse].T) * learning_rate

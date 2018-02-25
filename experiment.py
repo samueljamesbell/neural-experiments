@@ -6,12 +6,16 @@ import utils
 _TRAINING_EPOCHS = 1
 _LEARNING_RATE = 0.0001
 
+_LAYERS = [4, 3, 3]
+# Input layer size = 4
+# Single hidden layer size = 3
+# Output layer size = 3
+
 
 def _main():
     X_train, Y_train = iris_data_loader.training_data()
     X_test, Y_test = iris_data_loader.test_data()
-    number_of_training_examples = X_train.shape[1]
-    n = FeedForwardNet(number_of_training_examples)
+    n = FeedForwardNet(_LAYERS)
 
     Y_train_categorical = utils.to_categorical_identity(
             Y_train, iris_data_loader.LABELS)
