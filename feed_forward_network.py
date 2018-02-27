@@ -1,4 +1,4 @@
-"""A simple feedforward neural network with a fixed number of layers. """
+"""A simple feedforward neural network with a variable number of layers. """
 import numpy as np
 
 import activation
@@ -6,14 +6,8 @@ import cost
 import utils
 
 
-_INPUT_LAYER_DIMENSIONS = 4
-_HIDDEN_LAYER_DIMENSIONS = 3
-_OUTPUT_LAYER_DIMENSIONS = 3
-
-
 class FeedForwardNet(object):
 
-    # TODO: Generalise to flexible number of layers and dimensions.
     # TODO: Use softmax output layer and cross-entropy loss function.
 
     def __init__(self, layers):
