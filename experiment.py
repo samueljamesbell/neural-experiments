@@ -3,7 +3,7 @@ import iris_data_loader
 import utils
 
 
-_TRAINING_EPOCHS = 1
+_TRAINING_EPOCHS = 25000
 _LEARNING_RATE = 0.0001
 
 _LAYERS = [4, 3, 3]

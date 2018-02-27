@@ -52,11 +52,10 @@ class FeedForwardNet(object):
             # softmax_outputs = utils.softmax(self.A_o)
             # cost = cost.quadratic_cost_prime(softmax_outputs, Y)
             C = cost.quadratic_cost_prime(A[-1], Y)
-            deltas = self._back_propagate(C, X, Z, A)
-            self._batch_gradient_descent(deltas, X, A, learning_rate)
+            deltas = self._back_propagate(C, Z)
+            self._batch_gradient_descent(deltas, A, learning_rate)
 
         # Perform a final forward pass with our optimised weights.
-        print(A[-1])
         return utils.take_max(A[-1])
 
     def test(self, X):
@@ -93,7 +92,7 @@ class FeedForwardNet(object):
 
         return Z, A
 
-    def _back_propagate(self, C, X, Z, A):
+    def _back_propagate(self, C, Z):
         """Calculate error w.r.t C for each layer.
 
         C is an o x n matrix, where o is the dimensionality of the output
@@ -102,17 +101,12 @@ class FeedForwardNet(object):
         of the cost function with respect to each entry in the output
         activation vector.
 
-        X is an f x n matrix, where f is the number of features and n is the
-        number of training examples.
-
         Z is a list of weighted inputs, where each
         entry is a d x n matrix, where d is the dimensionality of the layer and
         n is the number of data points.
 
-        A is a list of activations, with the same shape as Z.
-
-        The final item in A is the output layer, and the first item is the
-        first hidden layer. The same is true for Z.
+        The final item in Z is the output layer, and the first item is the
+        first hidden layer.
 
         Returns deltas, a list of errors where each entry in the list is a
         1 x d matrix where d is the dimensionality of the layer, representing
@@ -132,15 +126,12 @@ class FeedForwardNet(object):
 
         return deltas
 
-    def _batch_gradient_descent(self, deltas, X, A, learning_rate):
+    def _batch_gradient_descent(self, deltas, A, learning_rate):
         """Update weights according to the layer-by-layer errors.
 
         deltas is a list of errors where each entry in the list is a
         1 x d matrix where d is the dimensionality of the layer, representing
         the error w.r.t each activation in the layer.
-
-        X is an f x n matrix, where f is the number of features and n is the
-        number of training examples.
 
         A is a list of activations, where each entry is a d x n matrix, where
         d is the dimensionality of the layer and n is the number of data
